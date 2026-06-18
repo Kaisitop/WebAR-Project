@@ -54,9 +54,19 @@ const audios = [
   new Audio(`assets/audio/${folder}/Tercera-pregunta.aac`),
 ];
 
+const audiosIncorrectos = [
+  new Audio(`public/Primera-incorrecta.aac`),
+  new Audio(`public/Segunda-incorrecta.aac`),
+  new Audio(`public/Tercera-incorrecta.aac`),
+];
+
 function activarAudioSistema() {
   if (audioListo) return;
   audios.forEach(audio => {
+    audio.muted = false;
+    audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(() => {});
+  });
+  audiosIncorrectos.forEach(audio => {
     audio.muted = false;
     audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(() => {});
   });
@@ -118,6 +128,7 @@ function cerrarPanel() {
   document.getElementById("quiz-panel").classList.remove("open");
   document.getElementById("quiz-overlay").classList.remove("open");
   audios.forEach(a => { a.pause(); a.currentTime = 0; });
+  audiosIncorrectos.forEach(a => { a.pause(); a.currentTime = 0; });
 }
 
 /* ==========================
@@ -272,6 +283,7 @@ function responder(boton, correcta, porTiempo = false) {
 
   /* Detener audio y bloquear opciones inmediatamente */
   audios.forEach(a => { a.pause(); a.currentTime = 0; });
+  audiosIncorrectos.forEach(a => { a.pause(); a.currentTime = 0; });
   opciones.forEach(op => op.classList.add("disabled"));
 
   if (correcta) {
@@ -281,6 +293,9 @@ function responder(boton, correcta, porTiempo = false) {
     boton.innerHTML = '<span class="opt-icon">✅</span> 🎉 ¡Correcto!';
   } else {
     sfxIncorrect.play().catch(() => {});
+    if (audiosIncorrectos[preguntaOriginalIndex]) {
+      audiosIncorrectos[preguntaOriginalIndex].play().catch(() => {});
+    }
     
     if (porTiempo) {
       document.getElementById("question-title").textContent = "⏳ ¡Tiempo Agotado!";
