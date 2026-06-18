@@ -74,7 +74,7 @@ if (video) {
   if (currentTheme.bgm) {
     const bgmAudio = new Audio(currentTheme.bgm);
     bgmAudio.loop = true;
-    bgmAudio.volume = 0.03; // Volumen al 15% para que sea suave y no tape las voces
+    bgmAudio.volume = 0.01; // Volumen al 15% para que sea suave y no tape las voces
 
     // Intento de autoplay (funciona en PC y en algunos Android si vienes del index)
     bgmAudio.play().catch(() => {
