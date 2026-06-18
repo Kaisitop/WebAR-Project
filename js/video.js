@@ -69,27 +69,54 @@ if (video) {
   }, { once: true });
 
   // ==========================================
-  // AUDIO DE AMBIENTE (BGM)
+  // AUDIO DE AMBIENTE (BGM) - FIX IPHONE
   // ==========================================
   if (currentTheme.bgm) {
     const bgmAudio = new Audio(currentTheme.bgm);
     bgmAudio.loop = true;
-    bgmAudio.volume = 0.01; // Volumen al 15% para que sea suave y no tape las voces
+    bgmAudio.crossOrigin = "anonymous";
+    bgmAudio.volume = 0.1; // Funciona en PC y Android
 
-    // Intento de autoplay (funciona en PC y en algunos Android si vienes del index)
-    bgmAudio.play().catch(() => {
-      // Si el navegador (ej. iOS Safari) bloquea el autoplay, 
-      // esperamos al primer toque del usuario en la pantalla
-      const iniciarAudioGesto = () => {
-        bgmAudio.play().catch(() => {});
-        document.removeEventListener("touchstart", iniciarAudioGesto);
-        document.removeEventListener("click", iniciarAudioGesto);
-      };
+    let isWebAudioInit = false;
+    let audioCtx = null;
+
+    const iniciarAudioGesto = () => {
+      // El iPhone ignora "bgmAudio.volume". La única forma de bajarle el volumen por código 
+      // en iOS es conectándolo a la Web Audio API y pasándolo por un nodo de ganancia (GainNode).
+      if (!isWebAudioInit) {
+        try {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          audioCtx = new AudioContext();
+          const track = audioCtx.createMediaElementSource(bgmAudio);
+          const gainNode = audioCtx.createGain();
+          gainNode.gain.value = 0.1; // 15% de volumen forzado
+          track.connect(gainNode).connect(audioCtx.destination);
+          isWebAudioInit = true;
+        } catch(e) {
+          console.log("Web Audio no soportado/falló", e);
+        }
+      }
+
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      bgmAudio.play().catch(() => {});
+      document.removeEventListener("touchstart", iniciarAudioGesto);
+      document.removeEventListener("click", iniciarAudioGesto);
+    };
+
+    // Intentamos reproducir
+    bgmAudio.play().then(() => {
+      // Autoplay funcionó, pero conectamos el Web Audio al primer tap para forzar volumen en iPadOS
+      document.addEventListener("touchstart", iniciarAudioGesto, { once: true });
+      document.addEventListener("click", iniciarAudioGesto, { once: true });
+    }).catch(() => {
+      // Autoplay bloqueado (típico en iPhone), esperamos el tap
       document.addEventListener("touchstart", iniciarAudioGesto, { once: true });
       document.addEventListener("click", iniciarAudioGesto, { once: true });
     });
     
-    // Lo guardamos en window por si en un futuro necesitas pausarlo externamente
     window.bgmAudio = bgmAudio;
   }
 }
