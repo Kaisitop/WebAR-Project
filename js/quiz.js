@@ -60,6 +60,16 @@ const audiosIncorrectos = [
   new Audio(`public/Tercera-incorrecta.aac`),
 ];
 
+const audiosCorrectos = [
+  new Audio(`assets/audio/${folder}/Primera-correcta.aac`),
+  new Audio(`assets/audio/${folder}/Segunda-correcta.aac`),
+  new Audio(`assets/audio/${folder}/Tercera-correcta.aac`),
+];
+
+// Audio que suena al terminar el quiz — individual por tarjeta
+// Coloca el archivo en: assets/audio/[carpeta_tema]/final.aac
+const audioFinal = new Audio(`assets/audio/${folder}/final.aac`);
+
 function activarAudioSistema() {
   if (audioListo) return;
   audios.forEach(audio => {
@@ -70,6 +80,12 @@ function activarAudioSistema() {
     audio.muted = false;
     audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(() => {});
   });
+  audiosCorrectos.forEach(audio => {
+    audio.muted = false;
+    audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(() => {});
+  });
+  audioFinal.muted = false;
+  audioFinal.play().then(() => { audioFinal.pause(); audioFinal.currentTime = 0; }).catch(() => {});
   audioListo = true;
 }
 
@@ -129,6 +145,8 @@ function cerrarPanel() {
   document.getElementById("quiz-overlay").classList.remove("open");
   audios.forEach(a => { a.pause(); a.currentTime = 0; });
   audiosIncorrectos.forEach(a => { a.pause(); a.currentTime = 0; });
+  audiosCorrectos.forEach(a => { a.pause(); a.currentTime = 0; });
+  audioFinal.pause(); audioFinal.currentTime = 0;
 }
 
 /* ==========================
@@ -284,11 +302,15 @@ function responder(boton, correcta, porTiempo = false) {
   /* Detener audio y bloquear opciones inmediatamente */
   audios.forEach(a => { a.pause(); a.currentTime = 0; });
   audiosIncorrectos.forEach(a => { a.pause(); a.currentTime = 0; });
+  audiosCorrectos.forEach(a => { a.pause(); a.currentTime = 0; });
   opciones.forEach(op => op.classList.add("disabled"));
 
   if (correcta) {
     puntaje++; // Suma el punto tanto en la primera vez como en el repaso
     sfxCorrect.play().catch(() => {});
+    if (audiosCorrectos[preguntaOriginalIndex]) {
+      audiosCorrectos[preguntaOriginalIndex].play().catch(() => {});
+    }
     boton.className = "option correct";
     boton.innerHTML = '<span class="opt-icon">✅</span> 🎉 ¡Correcto!';
   } else {
@@ -322,23 +344,33 @@ function responder(boton, correcta, porTiempo = false) {
 
   setTimeout(() => {
     mostrarEstrella(correcta ? 'happy' : 'sad', () => {
-      if (!modoRepeticion) {
-        preguntaActual++;
-        if (preguntaActual < preguntas.length) {
-          cargarPregunta();
+
+      /* Función que avanza al siguiente paso del quiz */
+      const avanzar = () => {
+        if (!modoRepeticion) {
+          preguntaActual++;
+          if (preguntaActual < preguntas.length) {
+            cargarPregunta();
+          } else {
+            mostrarResultado();
+          }
         } else {
-          // Termina la primera pasada, muestra los resultados (y opción de repaso si hubo fallos)
-          mostrarResultado();
+          repeticionIndex++;
+          if (repeticionIndex < preguntasFallidas.length) {
+            cargarPregunta();
+          } else {
+            mostrarResultado();
+          }
         }
+      };
+
+      /* Si hubo un audio correcto en reproducción, espera a que termine antes de avanzar.
+         De lo contrario avanza de inmediato. */
+      const audioActivo = audiosCorrectos[preguntaOriginalIndex];
+      if (correcta && audioActivo && !audioActivo.paused && !audioActivo.ended) {
+        audioActivo.addEventListener('ended', avanzar, { once: true });
       } else {
-        // En modo repaso, pasar a la siguiente pregunta que había fallado
-        repeticionIndex++;
-        if (repeticionIndex < preguntasFallidas.length) {
-          cargarPregunta();
-        } else {
-          // Termina el repaso, muestra el resultado definitivo
-          mostrarResultado();
-        }
+        avanzar();
       }
     });
   }, 400);
@@ -350,6 +382,13 @@ function responder(boton, correcta, porTiempo = false) {
 ========================== */
 function mostrarResultado() {
   clearInterval(timerInterval);
+
+  // Detener todos los audios activos y reproducir el audio final de este tema
+  audios.forEach(a => { a.pause(); a.currentTime = 0; });
+  audiosCorrectos.forEach(a => { a.pause(); a.currentTime = 0; });
+  audiosIncorrectos.forEach(a => { a.pause(); a.currentTime = 0; });
+  audioFinal.currentTime = 0;
+  audioFinal.play().catch(() => {});
   
   const bar = document.getElementById('quiz-progress-bar');
   if (bar) bar.style.width = '100%';
@@ -401,6 +440,7 @@ function iniciarRepaso() {
 
 function reiniciarCompleto() {
   clearInterval(timerInterval);
+  audioFinal.pause(); audioFinal.currentTime = 0;
   preguntaActual = 0;
   puntaje = 0;
   preguntasFallidas = [];
