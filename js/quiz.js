@@ -55,9 +55,9 @@ const audios = [
 ];
 
 const audiosIncorrectos = [
-  new Audio(`public/Primera-incorrecta.aac`),
-  new Audio(`public/Segunda-incorrecta.aac`),
-  new Audio(`public/Tercera-incorrecta.aac`),
+  new Audio(`assets/audio/${folder}/Primera-incorrecta.aac`),
+  new Audio(`assets/audio/${folder}/Segunda-incorrecta.aac`),
+  new Audio(`assets/audio/${folder}/Tercera-incorrecta.aac`),
 ];
 
 const audiosCorrectos = [
@@ -364,10 +364,13 @@ function responder(boton, correcta, porTiempo = false) {
         }
       };
 
-      /* Si hubo un audio correcto en reproducción, espera a que termine antes de avanzar.
+      /* Si hubo un audio en reproducción (correcto o incorrecto), espera a que termine antes de avanzar.
          De lo contrario avanza de inmediato. */
-      const audioActivo = audiosCorrectos[preguntaOriginalIndex];
-      if (correcta && audioActivo && !audioActivo.paused && !audioActivo.ended) {
+      const audioActivo = correcta
+        ? audiosCorrectos[preguntaOriginalIndex]
+        : audiosIncorrectos[preguntaOriginalIndex];
+
+      if (audioActivo && !audioActivo.paused && !audioActivo.ended) {
         audioActivo.addEventListener('ended', avanzar, { once: true });
       } else {
         avanzar();
