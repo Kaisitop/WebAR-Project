@@ -7,6 +7,8 @@ const params      = new URLSearchParams(window.location.search);
 const themeId     = parseInt(params.get('tema')) || 1;
 const currentTheme = themesData[themeId] || themesData[1];
 
+unlockTheme(themeId);
+
 /* Ajustar color hex sumando offset a cada canal */
 function adjustColor(hex, amount) {
   return '#' + hex.replace(/^#/, '').replace(/../g, c =>
@@ -242,6 +244,8 @@ const STAR_SAD_MS   = 1800;   // tristeAnim.webm
 const starOverlay = document.getElementById('star-anim-overlay');
 const starVideo   = document.getElementById('star-anim-video');
 
+if (starVideo) prepareVideoForIOS(starVideo);
+
 /**
  * Muestra la animación de estrella, espera a que el video termine
  * (o al timeout de seguridad) y luego llama al callback.
@@ -249,46 +253,42 @@ const starVideo   = document.getElementById('star-anim-video');
  * @param {Function} onDone - se llama cuando la animación termina
  */
 function mostrarEstrella(type, onDone) {
-  /* Detección básica de iOS */
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  
-  /* En iOS carga feliz.mov / triste.mov. En Android/otros carga felizAnim.webm / tristeAnim.webm */
+
   const baseName = type === 'happy' ? 'feliz' : 'triste';
   const src      = isIOS ? `public/${baseName}.mov` : `public/${baseName}Anim.webm`;
   const duration = type === 'happy' ? STAR_HAPPY_MS : STAR_SAD_MS;
 
-  /* Añadir o quitar clase 'sad' para controlar el tamaño */
   if (type === 'sad') {
     starOverlay.classList.add('sad');
   } else {
     starOverlay.classList.remove('sad');
   }
 
-  /* Asignar fuente y mostrar */
+  stripVideoControls(starVideo);
   starVideo.src = src;
   starVideo.currentTime = 0;
   starOverlay.classList.remove('hiding');
   starOverlay.classList.add('active');
   starVideo.play().catch(() => {});
+  if (isIOS) suppressMediaSession();
 
-  /* Tiempo de seguridad por si el evento 'ended' no llega */
   let safeTimeout;
 
   function cerrarEstrella() {
     clearTimeout(safeTimeout);
     starVideo.removeEventListener('ended', cerrarEstrella);
 
-    /* Fade out */
     starOverlay.classList.add('hiding');
     setTimeout(() => {
       starOverlay.classList.remove('active', 'hiding', 'sad');
       starVideo.src = '';
       if (onDone) onDone();
-    }, 270); /* duración de starFadeOut */
+    }, 270);
   }
 
   starVideo.addEventListener('ended', cerrarEstrella, { once: true });
-  safeTimeout = setTimeout(cerrarEstrella, duration + 300); /* +300ms margen */
+  safeTimeout = setTimeout(cerrarEstrella, duration + 300);
 }
 
 /* ==========================
@@ -396,31 +396,28 @@ function mostrarResultado() {
   const bar = document.getElementById('quiz-progress-bar');
   if (bar) bar.style.width = '100%';
 
-  const total = preguntas.length;
-  
-  // Determinar estrellas y mensaje
-  let stars, msg, calColor;
-  if (puntaje === total) {
-    stars = '⭐⭐⭐'; msg = '¡Perfecto! ¡Lo lograste!'; calColor = '#22c55e';
-  } else if (puntaje >= total * 0.66) {
-    stars = '⭐⭐'; msg = '¡Muy bien hecho!'; calColor = '#f59e0b';
-  } else if (puntaje > 0) {
-    stars = '⭐'; msg = '¡Sigue practicando!'; calColor = '#ef4444';
-  } else {
-    stars = '😅'; msg = '¡Inténtalo de nuevo!'; calColor = '#ef4444';
+  if (!modoRepeticion) {
+    markThemeComplete(themeId);
   }
 
-  document.getElementById("question-title").textContent    = `${stars} ${msg}`;
-  document.getElementById("question-subtitle").textContent = `Obtuviste ${puntaje} de ${total}`;
+  const numFallidas = preguntasFallidas.length;
+  const permiteRepaso = !modoRepeticion && numFallidas > 0;
 
-  // Comprobar si hay preguntas fallidas y no estamos ya después de un repaso
-  const permiteRepaso = !modoRepeticion && preguntasFallidas.length > 0;
+  if (modoRepeticion) {
+    document.getElementById("question-title").textContent    = `${currentTheme.icon} ¡Listo!`;
+    document.getElementById("question-subtitle").textContent = "Terminaste de repasar";
+  } else if (numFallidas === 0) {
+    document.getElementById("question-title").textContent    = "⭐ ¡Lo lograste!";
+    document.getElementById("question-subtitle").textContent = "";
+  } else if (numFallidas === 1) {
+    document.getElementById("question-title").textContent    = `${currentTheme.icon} ¡Buen trabajo!`;
+    document.getElementById("question-subtitle").textContent = "Te equivocaste en 1 pregunta";
+  } else {
+    document.getElementById("question-title").textContent    = `${currentTheme.icon} ¡Buen trabajo!`;
+    document.getElementById("question-subtitle").textContent = `Te equivocaste en ${numFallidas} preguntas`;
+  }
 
   document.getElementById("quiz-options").innerHTML = `
-    <button class="option" disabled style="justify-content:center; font-size:18px; font-weight:800; border-color:${calColor}; color:${calColor}; background:${calColor}15; cursor:default;">
-      <span class="opt-icon" style="font-size:22px;">${currentTheme.icon}</span>
-      ${puntaje} / ${total} correctas
-    </button>
     ${permiteRepaso ? `
     <button class="option" onclick="iniciarRepaso()" style="justify-content:center; border-color: var(--primary); background: var(--primary-light);">
       <span class="opt-icon" style="font-size:20px">🔄</span>

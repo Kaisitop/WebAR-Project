@@ -28,6 +28,42 @@ body {
   font-family: var(--font);
 }
 
+/* Video textura AR: invisible pero sigue reproduciendo (textura WebGL) */
+a-assets video,
+video#goku {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: auto !important;
+  opacity: 0.001 !important;
+  clip-path: inset(50%) !important;
+  pointer-events: none !important;
+  z-index: -9999 !important;
+  -webkit-touch-callout: none !important;
+}
+
+.arjs-video {
+  pointer-events: none !important;
+}
+
+video::-webkit-media-controls,
+video::-webkit-media-controls-enclosure,
+video::-webkit-media-controls-panel,
+video::-webkit-media-controls-play-button,
+video::-webkit-media-controls-start-playback-button,
+video::-webkit-media-controls-overlay-play-button,
+video::-webkit-media-controls-timeline,
+video::-webkit-media-controls-current-time-display {
+  display: none !important;
+  -webkit-appearance: none;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 /* ================================
    BOTÓN VOLVER
 ================================ */
@@ -430,9 +466,9 @@ body {
   width: min(72vw, 340px);
   height: auto;
   border-radius: 24px;
-  /* Sombra difusa acorde al tipo */
   filter: drop-shadow(0 8px 32px rgba(0,0,0,0.35));
   transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
 }
 
 /* Estrella triste más pequeña */
