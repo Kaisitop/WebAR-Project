@@ -369,8 +369,8 @@ const themesData = {
         subtitulo: "Pregunta 3 de 3",
         opciones: [
           { texto: "Seguiría atrapado", icono: "A", correcta: true },
-          { texto: "Construiría una casa", icono: "B", correcta: false },
-          { texto: "Ganarían premio", icono: "C", correcta: false }
+          { texto: "Jugaria con otros animales", icono: "B", correcta: false },
+          { texto: "Ganaría un premio", icono: "C", correcta: false }
         ]
       }
     ]
